@@ -1,0 +1,75 @@
+# Distributed Web Infrastructure
+
+## Textual Visualization Diagram
+
+```
+[User] --> [Internet] --> [DNS Resolver]
+                             |
+                             v
+[www.foobar.com] --> [Load Balancer (HAproxy)]
+                             |
+                             v
+                +-------------------------+
+                |                         |
+                v                         v
+[Server 1]                           [Server 2]
+  ├── Nginx (Web Server)             ├── Nginx (Web Server)
+  ├── Application Server             ├── Application Server
+  ├── Application Files              ├── Application Files
+  └── MySQL (Primary)               └── MySQL (Replica)
+```
+
+## Explanations
+
+### Components and Why They Are Added
+1. **2 Servers**:
+   - Added to distribute the workload, improve reliability, and reduce the risk of a single point of failure (SPOF) compared to a single-server setup.
+   - Each server hosts Nginx, the application server, and application files, with one server running the MySQL Primary node and the other running the MySQL Replica node.
+2. **1 Web Server (Nginx)**:
+   - Handles incoming HTTP/HTTPS requests, serves static content, and forwards dynamic requests to the application server.
+   - Present on both servers to ensure redundancy and load distribution.
+3. **1 Application Server**:
+   - Executes application code (e.g., PHP) and generates dynamic content by interacting with the application files and database.
+   - Deployed on both servers for redundancy and load handling.
+4. **1 Load Balancer (HAproxy)**:
+   - Distributes incoming traffic across the two servers to balance the load, improve performance, and ensure availability if one server fails.
+5. **1 Set of Application Files (Code Base)**:
+   - Contains the website’s code, shared across both servers to ensure consistent application behavior.
+6. **1 Database (MySQL)**:
+   - Configured as a Primary-Replica (Master-Slave) cluster to store and manage website data.
+   - Primary node handles write operations, while the Replica node handles read operations to improve performance and provide redundancy.
+
+### Load Balancer Details
+- **Distribution Algorithm**: Round-robin
+  - **How it works**: HAproxy distributes incoming requests sequentially to each server in a circular order (Server 1, Server 2, Server 1, etc.). This ensures even distribution of traffic across the servers, assuming they have similar capacities.
+- **Setup**: Active-Active
+  - **Explanation**:
+    - **Active-Active**: Both servers actively handle traffic simultaneously, with HAproxy distributing requests to both. This maximizes resource utilization and performance.
+    - **Active-Passive**: One server handles all traffic (active), while the other remains on standby (passive), only taking over if the active server fails. Active-Active is used here for better load distribution.
+
+### Database Primary-Replica (Master-Slave) Cluster
+- **How it Works**:
+  - The Primary node (Master) accepts both read and write operations. All write operations (e.g., INSERT, UPDATE) are performed on the Primary.
+  - The Replica node (Slave) synchronizes with the Primary by replicating its data in near real-time. It handles read-only operations (e.g., SELECT), reducing the load on the Primary.
+  - The application servers can query the Replica for read operations and the Primary for write operations, improving database performance.
+- **Difference Between Primary and Replica**:
+  - **Primary Node**: Handles all write operations and is the source of truth for data changes. The application sends all write requests (e.g., updating user data) to the Primary.
+  - **Replica Node**: Handles read operations, serving data replicated from the Primary. The application uses the Replica for read-heavy tasks (e.g., displaying content) to offload the Primary.
+
+### Issues with the Infrastructure
+1. **Single Point of Failure (SPOF)**:
+   - The Load Balancer (HAproxy) is a SPOF. If it fails, traffic cannot be routed to either server, making the website inaccessible.
+   - The DNS Resolver, while external, could also be considered a SPOF if not redundantly configured.
+2. **Security Issues**:
+   - **No Firewall**: The infrastructure lacks a firewall, leaving servers vulnerable to unauthorized access or attacks.
+   - **No HTTPS**: Traffic between the user, load balancer, and servers is not encrypted, exposing data to interception or tampering.
+3. **No Monitoring**:
+   - There are no monitoring tools to track server performance, uptime, or errors, making it difficult to detect and resolve issues proactively.
+
+## Screenshot
+- **Whiteboard Diagram Screenshot**: [Insert link to uploaded screenshot here]
+
+## Repository Information
+- **GitHub Repository**: alx-system_engineering-devops
+- **Directory**: 0x09-web_infrastructure_design
+- **File**: 1-distributed_web_infrastructure
