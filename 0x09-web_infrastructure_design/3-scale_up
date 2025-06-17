@@ -1,0 +1,55 @@
+# Scale Up
+
+## Textual Visualization Diagram
+
+```
+[User] --> [Internet] --> [DNS Resolver]
+                             |
+                             v
+[www.foobar.com (HTTPS)] --> [Load Balancer Cluster]
+                             |  ├── HAproxy 1 (Active)
+                             |  └── HAproxy 2 (Active)
+                             |
+                             v
+                +-------------------------+
+                |                         |
+                v                         v
+[Web Server 1]                       [Web Server 2]
+  ├── Firewall                      ├── Firewall
+  ├── Nginx (Web Server)            ├── Nginx (Web Server)
+  └── Monitoring Client             └── Monitoring Client
+                |
+                v
+[Application Server]
+  ├── Firewall
+  ├── Application Server
+  ├── Application Files
+  └── Monitoring Client
+                |
+                v
+[Database Server]
+  ├── Firewall
+  ├── MySQL (Primary)
+  ├── MySQL (Replica)
+  └── Monitoring Client
+```
+
+## Explanations
+
+### Components and Why They Are Added
+1. **1 Additional Server**:
+   - **Purpose**: Adds a fourth server to the infrastructure, allowing for dedicated roles (web server, application server, database) and improving scalability and performance.
+   - **Why Added**: Splitting components across servers reduces resource contention, enables independent scaling, and enhances reliability by isolating failures.
+2. **1 Load Balancer (HAproxy) Configured as Cluster**:
+   - **Purpose**: A second HAproxy instance is added to form a load balancer cluster with the existing HAproxy, ensuring high availability and eliminating the load balancer as a single point of failure (SPOF).
+   - **Why Added**: The cluster distributes traffic across web servers and provides failover if one HAproxy fails, maintaining website availability.
+3. **Split Components**:
+   - **Web Server (Nginx)**: Deployed on two dedicated servers (Web Server 1 and Web Server 2) to handle HTTP/HTTPS requests and serve static content efficiently.
+     - **Why Added**: Dedicated web servers optimize performance for static content delivery and allow scaling web tier independently.
+   - **Application Server**: Deployed on a dedicated server with application files to process dynamic requests and execute application logic.
+     - **Why Added**: Isolates application processing, improving performance and enabling independent scaling of the application tier.
+   - **Database (MySQL)**: Deployed on a dedicated server with Primary and Replica nodes to manage data storage and queries.
+     - **Why Added**: Dedicated database server optimizes database performance, supports read/write separation, and allows independent scaling of the database tier.
+
+### Additional Specifics
+1. **Load Balancer Cluster
