@@ -1,0 +1,55 @@
+# Simple Web Stack
+
+## Infrastructure Design
+
+```
+[User] --> [Internet] --> [DNS Resolver]
+                             |
+                             v
+[www.foobar.com] --> [Server IP: 8.8.8.8]
+                             |
+                             v
+[Server]
+  ├── Nginx (Web Server)
+  ├── Application Server
+  ├── Application Files (Code Base)
+  └── MySQL (Database)
+```
+
+## Explanations
+
+1. **What is a server**:
+   A server is a physical or virtual machine that provides services to clients over a network, hosting the web server, application server, application files, and database.
+
+2. **Role of the domain name**:
+   The domain name `foobar.com` maps to the server’s IP (`8.8.8.8`) via DNS, providing a human-readable address for the website.
+
+3. **Type of DNS record for `www` in `www.foobar.com`**:
+   The `www` is typically a CNAME record aliasing `www.foobar.com` to `foobar.com`, which resolves to the server’s IP via an A record.
+
+4. **Role of the web server**:
+   Nginx handles HTTP/HTTPS requests, serves static content, and forwards dynamic requests to the application server.
+
+5. **Role of the application server**:
+   The application server executes application code (e.g., PHP) and generates dynamic content, interacting with the database and application files.
+
+6. **Role of the database**:
+   MySQL stores and manages the website’s data, providing it to the application server for dynamic content generation.
+
+7. **How the server communicates with the user's computer**:
+   The server uses HTTP/HTTPS protocols over the internet to respond to browser requests with web content.
+
+8. **Issues with the infrastructure**:
+   - **SPOF**: A single server failure makes the website unavailable.
+   - **Downtime**: Maintenance or code deployment requires server restarts, causing downtime.
+   - **Scalability**: Limited resources restrict handling high traffic.
+
+## Screenshot
+
+- **Whiteboard Diagram Screenshot**: [Insert link to uploaded screenshot here]
+
+## Repository Information
+
+- **GitHub Repository**: alx-system_engineering-devops
+- **Directory**: 0x09-web_infrastructure_design
+- **File**: 0-simple_web_stack
