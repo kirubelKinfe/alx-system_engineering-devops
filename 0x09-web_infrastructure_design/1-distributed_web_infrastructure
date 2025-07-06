@@ -1,75 +1,118 @@
-# Distributed Web Infrastructure
+# Distributed Web Infrastructure Design for www.foobar.com
 
-## Textual Visualization Diagram
-
-```
-[User] --> [Internet] --> [DNS Resolver]
-                             |
-                             v
-[www.foobar.com] --> [Load Balancer (HAproxy)]
-                             |
-                             v
-                +-------------------------+
-                |                         |
-                v                         v
-[Server 1]                           [Server 2]
-  ├── Nginx (Web Server)             ├── Nginx (Web Server)
-  ├── Application Server             ├── Application Server
-  ├── Application Files              ├── Application Files
-  └── MySQL (Primary)               └── MySQL (Replica)
-```
-
-## Explanations
-
-### Components and Why They Are Added
-1. **2 Servers**:
-   - Added to distribute the workload, improve reliability, and reduce the risk of a single point of failure (SPOF) compared to a single-server setup.
-   - Each server hosts Nginx, the application server, and application files, with one server running the MySQL Primary node and the other running the MySQL Replica node.
-2. **1 Web Server (Nginx)**:
-   - Handles incoming HTTP/HTTPS requests, serves static content, and forwards dynamic requests to the application server.
-   - Present on both servers to ensure redundancy and load distribution.
-3. **1 Application Server**:
-   - Executes application code (e.g., PHP) and generates dynamic content by interacting with the application files and database.
-   - Deployed on both servers for redundancy and load handling.
-4. **1 Load Balancer (HAproxy)**:
-   - Distributes incoming traffic across the two servers to balance the load, improve performance, and ensure availability if one server fails.
-5. **1 Set of Application Files (Code Base)**:
-   - Contains the website’s code, shared across both servers to ensure consistent application behavior.
-6. **1 Database (MySQL)**:
-   - Configured as a Primary-Replica (Master-Slave) cluster to store and manage website data.
-   - Primary node handles write operations, while the Replica node handles read operations to improve performance and provide redundancy.
-
-### Load Balancer Details
-- **Distribution Algorithm**: Round-robin
-  - **How it works**: HAproxy distributes incoming requests sequentially to each server in a circular order (Server 1, Server 2, Server 1, etc.). This ensures even distribution of traffic across the servers, assuming they have similar capacities.
-- **Setup**: Active-Active
-  - **Explanation**:
-    - **Active-Active**: Both servers actively handle traffic simultaneously, with HAproxy distributing requests to both. This maximizes resource utilization and performance.
-    - **Active-Passive**: One server handles all traffic (active), while the other remains on standby (passive), only taking over if the active server fails. Active-Active is used here for better load distribution.
-
-### Database Primary-Replica (Master-Slave) Cluster
-- **How it Works**:
-  - The Primary node (Master) accepts both read and write operations. All write operations (e.g., INSERT, UPDATE) are performed on the Primary.
-  - The Replica node (Slave) synchronizes with the Primary by replicating its data in near real-time. It handles read-only operations (e.g., SELECT), reducing the load on the Primary.
-  - The application servers can query the Replica for read operations and the Primary for write operations, improving database performance.
-- **Difference Between Primary and Replica**:
-  - **Primary Node**: Handles all write operations and is the source of truth for data changes. The application sends all write requests (e.g., updating user data) to the Primary.
-  - **Replica Node**: Handles read operations, serving data replicated from the Primary. The application uses the Replica for read-heavy tasks (e.g., displaying content) to offload the Primary.
-
-### Issues with the Infrastructure
-1. **Single Point of Failure (SPOF)**:
-   - The Load Balancer (HAproxy) is a SPOF. If it fails, traffic cannot be routed to either server, making the website inaccessible.
-   - The DNS Resolver, while external, could also be considered a SPOF if not redundantly configured.
-2. **Security Issues**:
-   - **No Firewall**: The infrastructure lacks a firewall, leaving servers vulnerable to unauthorized access or attacks.
-   - **No HTTPS**: Traffic between the user, load balancer, and servers is not encrypted, exposing data to interception or tampering.
-3. **No Monitoring**:
-   - There are no monitoring tools to track server performance, uptime, or errors, making it difficult to detect and resolve issues proactively.
-
-## Screenshot
-- **Whiteboard Diagram Screenshot**: https://excalidraw.com/#json=IOYvDDGmY586pLhDkUges,zzIL1Z6vm9w88XJKAk6wXA
+This document outlines a three-server web infrastructure design for hosting the website `www.foobar.com`. The infrastructure uses a distributed setup with Nginx, an application server, HAProxy as a load balancer, MySQL with a Primary-Replica cluster, and application files, configured to meet specific requirements.
 
 ## Repository Information
-- **GitHub Repository**: alx-system_engineering-devops
-- **Directory**: 0x09-web_infrastructure_design
-- **File**: 1-distributed_web_infrastructure
+- **GitHub Repository**: [alx-system_engineering-devops](https://github.com/alx-system_engineering-devops)
+- **Directory**: `0x09-web_infrastructure_design`
+- **File**: `1-distributed_web_infrastructure`
+
+## Requirements
+- **Infrastructure Components**:
+  - 2 additional servers (total of 3 servers)
+  - 1 web server (Nginx)
+  - 1 application server
+  - 1 load balancer (HAProxy)
+  - 1 set of application files (codebase)
+  - 1 database (MySQL with Primary-Replica cluster)
+- **Explanations Required**:
+  - Purpose of each additional element
+  - Load balancer’s distribution algorithm and how it works
+  - Active-Active vs. Active-Passive setup for the load balancer
+  - How a database Primary-Replica (Master-Slave) cluster works
+  - Difference between Primary and Replica nodes in relation to the application
+- **Issues to Address**:
+  - Single Points of Failure (SPOF)
+  - Security issues (no firewall, no HTTPS)
+  - Lack of monitoring
+
+## User Journey
+1. **User Action**: A user enters `www.foobar.com` in their browser and presses Enter.
+2. **DNS Resolution**:
+   - The browser queries a DNS resolver to resolve `www.foobar.com`.
+   - The resolver returns the IP address of the load balancer (e.g., `8.8.8.8`).
+3. **Request to Load Balancer**:
+   - The browser sends an HTTP request to the load balancer’s IP on port 80.
+   - HAProxy distributes the request to one of the two web/application servers based on its configured algorithm.
+4. **Server Processing**:
+   - The selected server’s Nginx receives the request.
+   - Nginx serves static content or forwards dynamic requests to the application server (e.g., PHP-FPM).
+   - The application server processes the request using application files and queries the MySQL database (Primary node for writes, Replica for reads).
+   - The application server generates a response (e.g., HTML) and sends it back to Nginx.
+5. **Response to User**:
+   - Nginx returns the response to HAProxy, which forwards it to the user’s browser.
+   - The browser renders the webpage.
+
+## Infrastructure Diagram
+```
+[User's Browser] --(HTTP)--> [Internet] --(DNS: www.foobar.com -> 8.8.8.8)--> [Load Balancer: 8.8.8.8]
+                                                                 |
+                                                                 v
++----------------------------------+  +----------------------------------+
+| Server 1                         |  | Server 2                         |
+| +------------------+             |  | +------------------+             |
+| | Nginx Web Server |<--> App     |  | | Nginx Web Server |<--> App     |
+| +------------------+     Server  |  | +------------------+     Server  |
+| +------------------+             |  | +------------------+             |
+| | Application Files|             |  | | Application Files|             |
+| +------------------+             |  | +------------------+             |
++----------------------------------+  +----------------------------------+
+                                              |
+                                              v
++----------------------------------+
+| Server 3                         |
+| +------------------+             |
+| | MySQL Primary    |<--> MySQL   |
+| | (Master)         |     Replica |
+| +------------------+             |
++----------------------------------+
+```
+
+## Infrastructure Components and Roles
+### Servers
+- **Total**: Three servers.
+- **Server 1 & 2**: Host Nginx, the application server (e.g., PHP-FPM), and application files.
+- **Server 3**: Hosts the MySQL database with a Primary-Replica cluster.
+- **Why Added**:
+  - Two servers for web/application hosting enable load distribution and partial redundancy.
+  - A separate database server isolates database operations, improving performance and security.
+
+### Web Server (Nginx)
+- **Role**:
+  - Handles HTTP requests from HAProxy.
+  - Serves static content (e.g., images, CSS, JS) from application files.
+  - Proxies dynamic requests to the application server.
+  - Listens on port 80.
+- **Why Added**: Efficiently manages web traffic and serves content, offloading static file delivery from the application server.
+
+### Application Server (e.g., PHP-FPM)
+- **Role**:
+  - Executes application code to generate dynamic content.
+  - Processes requests from Nginx.
+  - Queries the MySQL database (Primary for writes, Replica for reads).
+- **Why Added**: Separates application logic from web serving, allowing for optimized processing of dynamic content.
+
+### Load Balancer (HAProxy)
+- **Role**:
+  - Distributes incoming HTTP requests across Server 1 and Server 2.
+  - Ensures high availability and load distribution.
+- **Why Added**: Prevents overloading a single server, improves redundancy, and ensures availability if one server fails.
+- **Distribution Algorithm**: **Round-robin**
+  - **How It Works**: HAProxy alternates requests between Server 1 and Server 2 in a circular order (e.g., Request 1 to Server 1, Request 2 to Server 2, Request 3 to Server 1, etc.).
+  - Ensures even distribution of traffic, assuming servers have similar capacity.
+- **Setup Type**: **Active-Active**
+  - **Active-Active**: Both Server 1 and Server 2 actively handle traffic simultaneously, maximizing resource utilization.
+  - **Active-Passive**: One server handles traffic (active) while the other remains idle (passive) until the active server fails. Active-Active is preferred here for better performance.
+- **Configuration**: HAProxy listens on `8.8.8.8:80` and forwards requests to Server 1 and Server 2.
+
+### Application Files
+- **Role**:
+  - Contains the website’s codebase (e.g., PHP, HTML, CSS, JS) stored on Server 1 and Server 2 (e.g., `/var/www/foobar`).
+  - Synced across both servers to ensure consistency.
+- **Why Added**: Provides the logic and presentation layers for the website.
+
+### Database (MySQL Primary-Replica Cluster)
+- **Role**:
+  - Stores and manages website data (e.g., user accounts, posts).
+  - Consists of a Primary (Master) node and a Replica (Slave) node on Server 3.
+- **Why Added**: Enhances database reliability and read

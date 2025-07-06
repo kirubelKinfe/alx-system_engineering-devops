@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Configure a new Ubuntu server with Nginx and custom HTTP header
+# Ignores SC2154 shellcheck warning as per task instructions
+
+# Exit if any command fails
+set -e
+
+# Update package list
+apt-get update -y
+
+# Install Nginx if not already installed
+apt-get install -y nginx
+
+# Get hostname
+hostname=$(hostname)
+
+# Add custom header in Nginx default config
+sed -i "/^.*server_name _;/a \\\tadd_header X-Served-By \"$hostname\";" /etc/nginx/sites-available/default
+
+# Restart Nginx to apply changes
+service nginx restart

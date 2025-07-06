@@ -1,86 +1,103 @@
-# Shell, Init Files, Variables, and Expansions
+# 0x03. Shell, init files, variables and expansions
 
-This project covers shell initialization files, variables, expansions, and basic shell scripting in Bash.
+## Description
 
-## Project Tasks
+This project covers fundamental concepts of shell scripting, particularly around:
+- Shell variables (local and global)
+- Environment variables
+- Variable expansions
+- Shell arithmetic and base conversions
+- Aliases and path manipulation
+- Basic loops and string formatting in Bash
+
+---
+
+## Tasks
 
 ### 0. Create an alias
 **File:** `0-alias`  
-Creates an alias `ls` that executes `rm *` (removes all files in current directory)
+Creates an alias `ls` that executes `rm *`.
 
-### 1. Print hello user
+---
+
+### 1. Hello you
 **File:** `1-hello_you`  
-Prints "hello" followed by the current Linux username
+Prints `hello <username>`, where `<username>` is the current Linux user.
 
-### 2. Add to PATH
+---
+
+### 2. The path to success is to take massive, determined action
 **File:** `2-path`  
-Adds `/action` to the PATH environment variable (last directory searched)
+Adds `/action` to the end of the `PATH` environment variable.
 
-### 3. Count PATH directories
+---
+
+### 3. If the path be beautiful, let us not ask where it leads
 **File:** `3-paths`  
-Counts and prints the number of directories in the PATH variable
+Counts and prints the number of directories listed in the `PATH` variable.
 
-### 4. List environment variables
+---
+
+### 4. Global variables
 **File:** `4-global_variables`  
-Lists all environment variables
+Prints all global environment variables.
 
-### 5. List all variables and functions
+---
+
+### 5. Local variables
 **File:** `5-local_variables`  
-Lists all local variables, environment variables, and functions
+Prints all local variables, environment variables, and shell functions.
 
-### 6. Create local variable
+---
+
+### 6. Local variable
 **File:** `6-create_local_variable`  
-Creates a local variable `BEST` with value "School"
+Creates a local variable `BEST` with value `School`.
 
-### 7. Create global variable
+---
+
+### 7. Global variable
 **File:** `7-create_global_variable`  
-Creates a global variable `BEST` with value "School"
+Creates a global variable `BEST` with value `School`.
 
-### 8. Arithmetic with environment variable
+---
+
+### 8. Every addition to true knowledge is an addition to human power
 **File:** `8-true_knowledge`  
-Prints the result of adding 128 to the value stored in `TRUEKNOWLEDGE`
+Prints the result of `128 + $TRUEKNOWLEDGE`.
 
-### 9. Division of environment variables
+---
+
+### 9. Divide and rule
 **File:** `9-divide_and_rule`  
-Prints the result of `POWER` divided by `DIVIDE`
+Prints the result of dividing the value of `POWER` by `DIVIDE`.
 
-### 10. Exponentiation
+---
+
+### 10. Love is anterior to life, posterior to death, initial of creation, and the exponent of breath
 **File:** `10-love_exponent_breath`  
-Prints the result of `BREATH` to the power of `LOVE`
+Prints the result of `BREATH` raised to the power of `LOVE`.
 
-### 11. Binary to decimal
+---
+
+### 11. There are 10 types of people in the world -- Those who understand binary, and those who don't
 **File:** `11-binary_to_decimal`  
-Converts a binary number in `BINARY` to decimal
+Converts a binary number stored in the variable `BINARY` to decimal.
 
-### 12. Letter combinations
+---
+
+### 12. Combination
 **File:** `12-combinations`  
-Prints all possible two-letter combinations (a-z) except 'oo'
+Prints all possible two-letter combinations of lowercase letters except `oo`. Sorted alphabetically.
 
-### 13. Print float
+---
+
+### 13. Floats
 **File:** `13-print_float`  
-Prints a number with two decimal places from the `NUM` environment variable
+Prints the value of `NUM` with 2 decimal places of precision.
 
-## Requirements
-- All scripts are exactly 2 lines long
-- First line is exactly `#!/bin/bash`
-- No use of `&&`, `||`, `;`, `bc`, `sed`, or `awk`
-- All files are executable
-- All files end with a newline
+---
 
-## Concepts Covered
-- Shell initialization files (`/etc/profile`, `~/.bashrc`)
-- Local vs global variables
-- Variable creation, updating, and deletion
-- Special parameters (`$?`, `$$`, etc.)
-- Expansions (parameter, command substitution, arithmetic)
-- Single vs double quotes
-- Shell arithmetic operations
-- Alias creation and management
+## Author
+Project done as part of the **ALX Software Engineering Program**.
 
-## How to Use
-1. Clone the repository
-2. Make scripts executable: `chmod +x [filename]`
-3. For scripts that modify environment variables, run with `source`:  
-   `source [filename]`
-4. For others, execute directly:  
-   `./[filename]`

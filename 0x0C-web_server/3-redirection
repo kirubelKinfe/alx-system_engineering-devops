@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Installs and configures Nginx on an Ubuntu server with a 301 redirect for /redirect_me
+
+# Update package list and install Nginx with -y flag
+apt-get update -y
+apt-get install nginx -y
+
+# Create a simple HTML page with "Hello World!"
+echo "Hello World!" > /var/www/html/index.html
+
+# Configure Nginx to listen on port 80 and add a 301 redirect for /redirect_me
+cat > /etc/nginx/sites-available/default <<EOF
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+    root /var/www/html;
+    index index.html;
+
+    server_name _;
+
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+
+    location /redirect_me {
+        return 301 https://www.youtube.com/watch?v=QH2-TGUlwu4;
+    }
+}
+EOF
+
+# Test Nginx configuration
+nginx -t
+
+# Reload Nginx without using systemctl
+service nginx reload

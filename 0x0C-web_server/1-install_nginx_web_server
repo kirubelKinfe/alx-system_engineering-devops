@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Installs and configures Nginx on an Ubuntu server to serve "Hello World!" on port 80
+
+# Update package list and install Nginx with -y flag
+apt-get update -y
+apt-get install nginx -y
+
+# Create a simple HTML page with "Hello World!"
+echo "Hello World!" > /var/www/html/index.html
+
+# Ensure Nginx is configured to listen on port 80 (default configuration is usually sufficient)
+# Create or update the default Nginx configuration to serve the index.html
+cat > /etc/nginx/sites-available/default <<EOF
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+    root /var/www/html;
+    index index.html;
+
+    server_name _;
+
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+}
+EOF
+
+# Test Nginx configuration
+nginx -t
+
+# Reload Nginx without using systemctl
+service nginx reload

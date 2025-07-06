@@ -1,55 +1,164 @@
-# Scale Up
+# Scaled-Up Web Infrastructure Design for www.foobar.com
 
-## Textual Visualization Diagram
+This document outlines a scaled-up web infrastructure design for hosting the website `www.foobar.com`. The infrastructure enhances the previous secured and monitored three-server setup by adding one server and one HAProxy load balancer in a cluster, and splitting the web server, application server, and database across dedicated servers. It includes Nginx, PHP-FPM, MySQL (Primary-Replica cluster), application files, firewalls, an SSL certificate, and monitoring clients.
 
+## Repository Information
+- **GitHub Repository**: [alx-system_engineering-devops](https://github.com/alx-system_engineering-devops)
+- **Directory**: `0x09-web_infrastructure_design`
+- **File**: `3-scale_up`
+
+## Requirements
+- **Additional Components**:
+  - 1 additional server (total of 4 servers)
+  - 1 additional load balancer (HAProxy) configured as a cluster with the existing one
+  - Split components: web server, application server, and database on separate servers
+- **Explanations Required**:
+  - Purpose of each additional element
+  - Difference between application server and web server
+- **Inherited Components** (from previous design):
+  - 3 firewalls
+  - 1 SSL certificate for HTTPS
+  - 3 monitoring clients (e.g., Sumo Logic agents)
+  - MySQL Primary-Replica cluster
+  - Application files
+  - Nginx and PHP-FPM (now split across servers)
+
+## Application Server vs. Web Server
+- **Web Server (Nginx)**:
+  - Handles incoming HTTP/HTTPS requests from clients or load balancers.
+  - Serves static content (e.g., images, CSS, JS) directly from the filesystem.
+  - Proxies dynamic requests to the application server.
+  - Optimized for high concurrency, caching, and load balancing.
+  - Example: Nginx serves a static HTML page or forwards a PHP request.
+- **Application Server (e.g., PHP-FPM)**:
+  - Executes application code to generate dynamic content.
+  - Processes business logic (e.g., user authentication, data processing).
+  - Interacts with the database for data retrieval or updates.
+  - Example: PHP-FPM runs a PHP script to query MySQL and generate HTML.
+- **Key Difference**:
+  - The web server focuses on handling client requests and serving content, while the application server executes the application’s logic and interacts with backend systems (e.g., database).
+  - The web server is client-facing, while the application server is internal, processing dynamic requests.
+
+## User Journey
+1. **User Action**: A user enters `https://www.foobar.com` in their browser and presses Enter.
+2. **DNS Resolution**:
+   - The browser queries a DNS resolver to resolve `www.foobar.com`.
+   - The resolver returns the IP address of the active HAProxy load balancer (e.g., `8.8.8.8`).
+3. **Request to Load Balancer**:
+   - The browser sends an HTTPS request to the load balancer’s IP on port 443.
+   - The active HAProxy (in a clustered setup) terminates SSL and distributes the request to the web server using a round-robin algorithm.
+4. **Server Processing**:
+   - The web server (Nginx) receives the request and serves static content or proxies dynamic requests to the application server (PHP-FPM).
+   - The application server processes the request using application files and queries the MySQL database (Primary for writes, Replica for reads).
+   - The application server generates a response (e.g., HTML) and sends it back to Nginx.
+5. **Response to User**:
+   - Nginx returns the response to HAProxy, which forwards it to the user’s browser over HTTPS.
+   - The browser renders the webpage.
+
+## Infrastructure Diagram
 ```
-[User] --> [Internet] --> [DNS Resolver]
-                             |
-                             v
-[www.foobar.com (HTTPS)] --> [Load Balancer Cluster]
-                             |  ├── HAproxy 1 (Active)
-                             |  └── HAproxy 2 (Active)
-                             |
-                             v
-                +-------------------------+
-                |                         |
-                v                         v
-[Web Server 1]                       [Web Server 2]
-  ├── Firewall                      ├── Firewall
-  ├── Nginx (Web Server)            ├── Nginx (Web Server)
-  └── Monitoring Client             └── Monitoring Client
-                |
-                v
-[Application Server]
-  ├── Firewall
-  ├── Application Server
-  ├── Application Files
-  └── Monitoring Client
-                |
-                v
-[Database Server]
-  ├── Firewall
-  ├── MySQL (Primary)
-  ├── MySQL (Replica)
-  └── Monitoring Client
+[User's Browser] --(HTTPS)--> [Internet] --(DNS: www.foobar.com -> 8.8.8.8)--> [HAProxy Cluster: 8.8.8.8]
+                                                                 |  (Active-Passive: LB1 Active, LB2 Passive)
+                                                                 v
++----------------------------------+  +----------------------------------+
+| Server 1: Web Server            |  | Server 2: Application Server    |
+| +------------------+             |  | +------------------+             |
+| | Nginx            |             |  | | PHP-FPM          |             |
+| +------------------+             |  | +------------------+             |
+| +------------------+             |  | +------------------+             |
+| | Application Files|             |  | | Application Files|             |
+| +------------------+             |  | +------------------+             |
+| [Firewall] [Monitoring Client]   |  | [Firewall] [Monitoring Client]   |
++----------------------------------+  +----------------------------------+
+                                              |
+                                              v
++----------------------------------+  +----------------------------------+
+| Server 3: Database Server        |  | Server 4: Load Balancer (LB2)   |
+| +------------------+             |  | +------------------+             |
+| | MySQL Primary    |<--> MySQL   |  | | HAProxy (Passive)|             |
+| | (Master)         |     Replica |  | +------------------+             |
+| +------------------+             |  | [Firewall] [Monitoring Client]   |
+| [Firewall] [Monitoring Client]   |  +----------------------------------+
++----------------------------------+
 ```
 
-## Explanations
+## Infrastructure Components and Roles
+### Servers
+- **Total**: Four servers.
+- **Server 1 (Web Server)**: Hosts Nginx, application files (for static content), firewall, and monitoring client.
+- **Server 2 (Application Server)**: Hosts PHP-FPM, application files (for dynamic content), firewall, and monitoring client.
+- **Server 3 (Database Server)**: Hosts MySQL Primary-Replica cluster, firewall, and monitoring client.
+- **Server 4 (Load Balancer)**: Hosts the second HAProxy instance, firewall, and monitoring client.
 
-### Components and Why They Are Added
-1. **1 Additional Server**:
-   - **Purpose**: Adds a fourth server to the infrastructure, allowing for dedicated roles (web server, application server, database) and improving scalability and performance.
-   - **Why Added**: Splitting components across servers reduces resource contention, enables independent scaling, and enhances reliability by isolating failures.
-2. **1 Load Balancer (HAproxy) Configured as Cluster**:
-   - **Purpose**: A second HAproxy instance is added to form a load balancer cluster with the existing HAproxy, ensuring high availability and eliminating the load balancer as a single point of failure (SPOF).
-   - **Why Added**: The cluster distributes traffic across web servers and provides failover if one HAproxy fails, maintaining website availability.
-3. **Split Components**:
-   - **Web Server (Nginx)**: Deployed on two dedicated servers (Web Server 1 and Web Server 2) to handle HTTP/HTTPS requests and serve static content efficiently.
-     - **Why Added**: Dedicated web servers optimize performance for static content delivery and allow scaling web tier independently.
-   - **Application Server**: Deployed on a dedicated server with application files to process dynamic requests and execute application logic.
-     - **Why Added**: Isolates application processing, improving performance and enabling independent scaling of the application tier.
-   - **Database (MySQL)**: Deployed on a dedicated server with Primary and Replica nodes to manage data storage and queries.
-     - **Why Added**: Dedicated database server optimizes database performance, supports read/write separation, and allows independent scaling of the database tier.
+### Load Balancer Cluster (HAProxy)
+- **Role**: Two HA conson servers, distributes HTTPS requests to Server 1 (web server) using round-robin algorithm, terminates SSL.
+- **Configuration**: Active-Passive cluster with Keepalived for failover (VIP: `8.8.8.8`).
+- **Active-Passive Setup**: One HAProxy (LB1) handles traffic; the other (LB2) takes over if LB1 fails.
 
-### Additional Specifics
-1. **Load Balancer Cluster
+### Web Server (Nginx)
+- **Role**: Handles HTTP requests from HAProxy, serves static content, proxies dynamic requests to Server 2.
+
+### Application Server (PHP-FPM)
+- **Role**: Executes application code, processes dynamic requests, queries the MySQL database.
+
+### Database (MySQL Primary-Replica Cluster)
+- **Role**: Primary node handles writes; Replica node handles reads, with replication for consistency.
+
+### Application Files
+- **Role**: Codebase (e.g., PHP, HTML, CSS, JS) stored on Server 1 (static) and Server 2 (dynamic).
+
+### Firewalls (4)
+- **Role**: Restrict traffic to allowed ports (e.g., 443, 80, 3306, 22) on each server.
+- **Configuration**: Enforce security rules using `ufw` or `iptables`.
+
+### SSL Certificate
+- **Role**: Enables HTTPS on HAProxy for `www.foobar.com`, ensuring encrypted traffic.
+
+### Monitoring Clients (4)
+- **Role**: Collect logs and metrics (e.g., CPU, memory, QPS) for Sumo Logic or similar.
+- **QPS Monitoring**: Parse Nginx access logs to calculate Queries Per Second.
+
+## Additional Components and Their Purposes
+### Additional Server (Server 4)
+- **Why Added**:
+  - Hosts the second HAProxy instance for load balancer redundancy.
+  - Ensures high availability by allowing failover if the primary load balancer fails.
+- **Role**: Runs the passive HAProxy instance in the cluster, with a firewall and monitoring client.
+
+### HAProxy Load Balancer Cluster
+- **Why Added**:
+  - Adds redundancy to eliminate the load balancer as a single point of failure (SPOF).
+  - Ensures continuous availability if one load balancer fails.
+- **Configuration**:
+  - Two HAProxy instances (LB1 on existing server, LB Active-Passive setup using Keepalived with a shared virtual IP (`8.8.8.8`).
+  - Round-robin algorithm distributes traffic to Server 1 (web server).
+  - Failover is managed by Keepalived, which monitors HAProxy health and switches the VIP to the passive node if needed.
+
+### Split Components
+- **Why Split**:
+  - **Web Server (Server 1)**: Dedicated to Nginx for efficient static content delivery and request handling, reducing load on the application server.
+  - **Application Server (Server 2)**: Dedicated to PHP-FPM for dynamic content processing, improving performance and isolation.
+  - **Database Server (Server 3)**: Dedicated to MySQL for optimized database operations and security.
+- **Benefits**:
+  - Improves performance by isolating resource-intensive tasks.
+  - Enhances scalability by allowing independent scaling of each component.
+  - Increases security by isolating database access to Server 2.
+
+## Communication Protocol
+- **User to Load Balancer**: HTTPS (port 443) with SSL termination.
+- **Load Balancer to Web Server**: HTTP (port 80) internally.
+- **Web Server to Application Server**: FastCGI protocol for PHP-FPM.
+- **Application Server to Database**: MySQL protocol over TCP (port 3306).
+
+## Issues with the Infrastructure (Inherited)
+1. **SSL Termination at Load Balancer**:
+   - Internal traffic between HAProxy and Server 1 is unencrypted (HTTP), risking data exposure if the network is compromised.
+   - Mitigation: Implement end-to-end SSL by configuring Nginx with SSL certificates.
+2. **Single MySQL Write Node**:
+   - Only the Primary node on Server 3 accepts writes, creating a bottleneck and SPOF for write operations.
+   - Mitigation: Use multi-master replication or distribute database servers.
+3. **Monitoring and Maintenance**:
+   - While monitoring clients are present, additional tools (e.g., automated failover for MySQL) could improve resilience.
+
+## Notes
+This scaled-up design enhances the previous infrastructure by adding a server and a clustered HAProxy load balancer, splitting components across dedicated servers for improved performance, scalability, and reliability. For a visual diagram or further details, refer to the repository or contact the system administrator.

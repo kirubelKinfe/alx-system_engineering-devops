@@ -1,55 +1,83 @@
-# Simple Web Stack
+# Simple Web Stack Design for www.foobar.com
 
-## Infrastructure Design
-
-```
-[User] --> [Internet] --> [DNS Resolver]
-                             |
-                             v
-[www.foobar.com] --> [Server IP: 8.8.8.8]
-                             |
-                             v
-[Server]
-  ├── Nginx (Web Server)
-  ├── Application Server
-  ├── Application Files (Code Base)
-  └── MySQL (Database)
-```
-
-## Explanations
-
-1. **What is a server**:
-   A server is a physical or virtual machine that provides services to clients over a network, hosting the web server, application server, application files, and database.
-
-2. **Role of the domain name**:
-   The domain name `foobar.com` maps to the server’s IP (`8.8.8.8`) via DNS, providing a human-readable address for the website.
-
-3. **Type of DNS record for `www` in `www.foobar.com`**:
-   The `www` is typically a CNAME record aliasing `www.foobar.com` to `foobar.com`, which resolves to the server’s IP via an A record.
-
-4. **Role of the web server**:
-   Nginx handles HTTP/HTTPS requests, serves static content, and forwards dynamic requests to the application server.
-
-5. **Role of the application server**:
-   The application server executes application code (e.g., PHP) and generates dynamic content, interacting with the database and application files.
-
-6. **Role of the database**:
-   MySQL stores and manages the website’s data, providing it to the application server for dynamic content generation.
-
-7. **How the server communicates with the user's computer**:
-   The server uses HTTP/HTTPS protocols over the internet to respond to browser requests with web content.
-
-8. **Issues with the infrastructure**:
-   - **SPOF**: A single server failure makes the website unavailable.
-   - **Downtime**: Maintenance or code deployment requires server restarts, causing downtime.
-   - **Scalability**: Limited resources restrict handling high traffic.
-
-## Screenshot
-
-- **Whiteboard Diagram Screenshot**: https://excalidraw.com/#json=MNd3mz_s_v62yEoThChlLqGvej_fX93TBzXOGa8AKZA
+This document outlines a single-server web infrastructure design for hosting a website accessible via `www.foobar.com`. The infrastructure uses a LAMP-like stack with Nginx, an application server, MySQL, and application files, configured to meet specific requirements.
 
 ## Repository Information
+- **GitHub Repository**: [alx-system_engineering-devops](https://github.com/alx-system_engineering-devops)
+- **Directory**: `0x09-web_infrastructure_design`
+- **File**: `0-simple_web_stack`
 
-- **GitHub Repository**: alx-system_engineering-devops
-- **Directory**: 0x09-web_infrastructure_design
-- **File**: 0-simple_web_stack
+## Requirements
+- **Infrastructure Components**:
+  - 1 server
+  - 1 web server (Nginx)
+  - 1 application server
+  - 1 set of application files (codebase)
+  - 1 database (MySQL)
+  - 1 domain name (`foobar.com`) with a `www` record pointing to server IP `8.8.8.8`
+- **Explanations Required**:
+  - Definition of a server
+  - Role of the domain name
+  - Type of DNS record for `www` in `www.foobar.com`
+  - Roles of the web server, application server, and database
+  - Communication protocol between the server and the user’s computer
+- **Issues to Address**:
+  - Single Point of Failure (SPOF)
+  - Downtime during maintenance
+  - Scalability limitations with high traffic
+
+## User Journey
+1. **User Action**: A user enters `www.foobar.com` in their browser and presses Enter.
+2. **DNS Resolution**:
+   - The browser queries a DNS resolver to resolve `www.foobar.com`.
+   - The resolver returns the IP address `8.8.8.8` via an A record.
+3. **Request to Server**:
+   - The browser sends an HTTP/HTTPS request to the server at `8.8.8.8` on port 80 (HTTP) or 443 (HTTPS).
+4. **Server Processing**:
+   - Nginx receives the request.
+   - Nginx forwards dynamic requests to the application server (e.g., PHP-FPM).
+   - The application server processes the request using application files and queries the MySQL database for data.
+   - The application server generates a response (e.g., HTML) and sends it back to Nginx.
+5. **Response to User**:
+   - Nginx delivers the response to the user’s browser.
+   - The browser renders the webpage.
+
+## Infrastructure Diagram
+```
+[User's Browser] --(HTTP/HTTPS)--> [Internet] --(DNS: www.foobar.com -> 8.8.8.8)--> [Server: 8.8.8.8]
+                                                                 |
+                                                                 v
++-------------------------------------------------------------+
+| Server (IP: 8.8.8.8)                                        |
+|                                                             |
+|  +------------------+  +------------------+  +------------+  |
+|  | Nginx Web Server |<-->| Application    |<-->| MySQL DB |  |
+|  | (Port 80/443)    |  | Server (PHP-FPM)|  |            |  |
+|  +------------------+  +------------------+  +------------+  |
+|                                                             |
+|  +------------------+                                        |
+|  | Application Files|                                        |
+|  | (e.g., /var/www) |                                        |
+|  +------------------+                                        |
++-------------------------------------------------------------+
+```
+
+## Infrastructure Components and Roles
+### Server
+- **Definition**: A server is a physical or virtual machine running software to provide services over a network. Here, it hosts Nginx, the application server, MySQL, and application files.
+- **Details**: Single Linux server (e.g., Ubuntu) with IP `8.8.8.8`.
+
+### Domain Name (foobar.com)
+- **Role**: A human-readable address that maps to the server’s IP (`8.8.8.8`) via DNS, enabling easy access and branding for the website.
+
+### DNS Record for `www`
+- **Type**: The `www` in `www.foobar.com` is a subdomain configured with an **A record**.
+- **Example**: `www IN A 8.8.8.8`
+- **Role**: Resolves `www.foobar.com` to the server’s IP address.
+
+### Web Server (Nginx)
+- **Role**:
+  - Handles incoming HTTP/HTTPS requests.
+  - Serves static content (e.g., images, CSS, JS) from application files.
+  - Proxies dynamic requests to the application server.
+  - Listens on ports 80 (
