@@ -1,43 +1,63 @@
 #!/usr/bin/env bash
-# Configure HAProxy load balancer with roundrobin for web-01 and web-02
+# install load balancer
 
-set -e
 
-# Update package list
-apt-get update -y
+echo -e "Updating and doing some minor checks...\n"
 
-# Install HAProxy
-apt-get install -y haproxy
+function install() {
+	command -v "$1" &> /dev/null
 
-# Enable HAProxy to start at boot
-sed -i 's/ENABLED=0/ENABLED=1/' /etc/default/haproxy
+	#shellcheck disable=SC2181
+	if [ $? -ne 0 ]; then
+		echo -e "	Installing: $1\n"
+		sudo apt-get update -y -qq && \
+			sudo apt-get install -y "$1" -qq
+		echo -e "\n"
+	else
+		echo -e "	${1} is already installed.\n"
+	fi
+}
 
-# Configure HAProxy
-cat > /etc/haproxy/haproxy.cfg <<EOF
-global
-    log /dev/log    local0
-    log /dev/log    local1 notice
-    daemon
-    maxconn 2048
+install haproxy #install haproxy
 
+echo -e "\nSetting up some minor stuff.\n"
+
+# backup default server config file
+sudo cp /etc/haproxy/haproxy.cfg haproxy_default.backup
+
+server_config=\
+"
 defaults
-    log     global
-    mode    http
-    option  httplog
-    option  dontlognull
-    timeout connect 5000
-    timeout client  50000
-    timeout server  50000
+  mode http
+  timeout client 15s
+  timeout connect 10s
+  timeout server 15s
+  timeout http-request 10s
 
-frontend http_front
+frontend clickviral-tech-frontend
     bind *:80
-    default_backend http_back
+    default_backend clickviral-tech-backend
 
-backend http_back
+backend clickviral-tech-backend
     balance roundrobin
-    server web-01 <WEB_01_PRIVATE_IP>:80 check
-    server web-02 <WEB_02_PRIVATE_IP>:80 check
-EOF
+    server 151666-web-01 100.25.190.21:80 check
+    server 151666-web-02 54.160.77.90:80 check
+"
 
-# Restart HAProxy
-service haproxy restart
+# shellcheck disable=SC2154
+echo "$server_config" | sudo dd status=none of=/etc/haproxy/haproxy.cfg
+
+# enable haproxy to be started by init script
+echo "ENABLED=1" | sudo dd status=none of=/etc/default/haproxy
+
+echo "configured - Roundrobin On web-01 & web-02"
+
+if [ "$(pgrep -c haproxy)" -le 0 ]; then
+	sudo service haproxy start
+else
+	sudo service haproxy restart
+fi
+
+echo -e "web-01 web-02"
+echo "web-01"
+echo "web-02"

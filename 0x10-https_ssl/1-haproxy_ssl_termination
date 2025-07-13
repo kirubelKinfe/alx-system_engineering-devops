@@ -1,0 +1,91 @@
+#!/bin/bash
+
+# Exit on any error
+set -e
+
+# Variables
+DOMAIN="www.alxafrica.com"
+HAPROXY_CFG="/etc/haproxy/haproxy.cfg"
+NGINX_CFG="/etc/nginx/sites-available/default"
+WEB_ROOT="/var/www/html"
+CERT_PATH="/etc/letsencrypt/live/$DOMAIN"
+
+# Step 1: Install HAProxy and Certbot
+echo "Installing HAProxy and Certbot..."
+apt-get update
+apt-get install -y haproxy certbot
+haproxy -v | grep -q "version 1.5" || { echo "HAProxy version < 1.5 not supported"; exit 1; }
+
+# Step 2: Install Nginx for backend
+echo "Installing Nginx..."
+apt-get install -y nginx
+
+# Step 3: Generate SSL certificate with Certbot
+echo "Generating SSL certificate for $DOMAIN..."
+certbot certonly --standalone -d "$DOMAIN" --non-interactive --agree-tos --email admin@$DOMAIN || { echo "Certbot failed"; exit 1; }
+
+# Combine certificate and key for HAProxy
+cat "$CERT_PATH/fullchain.pem" "$CERT_PATH/privkey.pem" > "$CERT_PATH/fullchain.pem"
+
+# Step 4: Create Nginx configuration
+echo "Configuring Nginx backend..."
+cat > "$NGINX_CFG" << EOL
+server {
+    listen 80;
+    server_name $DOMAIN;
+    root $WEB_ROOT;
+    index index.html;
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+}
+EOL
+
+# Create index.html with "ALX"
+mkdir -p "$WEB_ROOT"
+echo "ALX for the win!" > "$WEB_ROOT/index.html"
+
+# Restart Nginx
+systemctl restart nginx
+
+# Step 5: Create HAProxy configuration
+echo "Generating HAProxy configuration..."
+cat > "$HAPROXY_CFG" << EOL
+global
+    log /dev/log local0
+    maxconn 4096
+    user haproxy
+    group haproxy
+    daemon
+
+defaults
+    log global
+    mode http
+    option httplog
+    option dontlognull
+    timeout connect 5000
+    timeout client 50000
+    timeout server 50000
+
+frontend https_front
+    bind *:443 ssl crt $CERT_PATH/fullchain.pem
+    mode http
+    option forwardfor
+    acl host_alxafrica hdr(host) -i $DOMAIN
+    use_backend web_backend if host_alxafrica
+
+backend web_backend
+    mode http
+    server web1 127.0.0.1:80 check
+EOL
+
+# Step 6: Validate and restart HAProxy
+echo "Validating and restarting HAProxy..."
+haproxy -c -f "$HAPROXY_CFG" || { echo "HAProxy config validation failed"; exit 1; }
+systemctl restart haproxy
+
+# Step 7: Test the setup
+echo "Testing HTTPS response..."
+curl -sI "https://$DOMAIN" | grep -q "200 OK" || { echo "HTTPS test failed"; exit 1; }
+curl "https://$DOMAIN" | grep -q "ALX" || { echo "ALX not found in response"; exit 1; }
+echo "Setup complete! Access https://$DOMAIN to verify."

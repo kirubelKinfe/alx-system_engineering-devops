@@ -1,0 +1,35 @@
+#!/bin/bash
+# Script to display information about subdomains
+
+# Function to get subdomain information
+get_subdomain_info() {
+    local domain="$1"
+    local subdomain="$2"
+    
+    # Use dig to get DNS information and awk to parse the A record
+    result=$(dig "${subdomain}.${domain}" | grep -A1 'ANSWER SECTION:' | awk '/IN\sA/ {print $5}')
+    
+    if [ -n "$result" ]; then
+        echo "The subdomain $subdomain is a A record and points to $result"
+    fi
+}
+
+# Main script logic
+domain="$1"
+subdomain="$2"
+
+# Check if domain is provided
+if [ -z "$domain" ]; then
+    echo "Error: Domain parameter is required"
+    exit 1
+fi
+
+# If subdomain is not provided, check default subdomains in specified order
+if [ -z "$subdomain" ]; then
+    for sub in www lb-01 web-01 web-02; do
+        get_subdomain_info "$domain" "$sub"
+    done
+else
+    # Check specific subdomain
+    get_subdomain_info "$domain" "$subdomain"
+fi
