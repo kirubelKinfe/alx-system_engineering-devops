@@ -1,5 +1,5 @@
-#!/bin/bash
-# Script to display information about subdomains
+#!/usr/bin/env bash
+# Script to display information about subdomains for a given domain using dig and awk
 
 # Function to get subdomain information
 get_subdomain_info() {
